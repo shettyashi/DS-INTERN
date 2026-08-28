@@ -1,0 +1,14 @@
+<div class="decision-card">
+  <div class="decision-card-label">Proposed step</div>
+  <p class="decision-card-desc">{{ description }}</p>
+  <div class="decision-card-actions">
+    <form hx-post="/commit" hx-target="#workspace" hx-swap="outerHTML">
+      <input type="hidden" name="step_id" value="{{ step_id }}">
+      <button type="submit" class="btn btn-confirm">Apply</button>
+    </form>
+    <form hx-post="/discard" hx-target="#decision-zone" hx-swap="innerHTML">
+      <input type="hidden" name="step_id" value="{{ step_id }}">
+      <button type="submit" class="btn btn-discard">Skip</button>
+    </form>
+  </div>
+</div>

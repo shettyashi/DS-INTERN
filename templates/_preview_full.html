@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DS Intern — full preview</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-brand">
+      <span class="topbar-mark">▣</span>
+      <span class="topbar-title">DS-INTERN — full preview</span>
+    </div>
+    <div class="topbar-meta">
+      {% if columns %}showing {{ shown }} of {{ total }} rows{% endif %}
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="panel">
+      {% if columns %}
+      {% if shown < total %}
+      <p class="panel-sub">
+        Showing the first {{ shown }} of {{ total }} rows. Download the full file
+        (CSV/Parquet) from the main page to get everything.
+      </p>
+      {% endif %}
+      <div class="table-scroll">
+        <table class="data-table">
+          <thead>
+            <tr>{% for col in columns %}<th>{{ col }}</th>{% endfor %}</tr>
+          </thead>
+          <tbody>
+            {% for row in rows %}
+            <tr>{% for val in row %}<td>{{ val if val is not none else "—" }}</td>{% endfor %}</tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="panel-sub">No dataset loaded yet.</p>
+      {% endif %}
+    </section>
+  </main>
+</body>
+</html>

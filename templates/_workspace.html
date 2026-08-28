@@ -1,0 +1,180 @@
+<div id="workspace">
+
+  {% if commit_error %}
+  <section class="panel decision-card decision-card-error">
+    <div class="decision-card-label">Couldn't apply that step</div>
+    <p class="decision-card-desc">{{ commit_error }}</p>
+  </section>
+  {% endif %}
+
+  {% if columns %}
+
+  <section class="panel">
+    <div class="panel-header">
+      <h2 class="panel-title">Column profile</h2>
+      <span class="panel-badge">{{ row_count }} rows &middot; {{ columns|length }} cols</span>
+    </div>
+    <div class="table-scroll">
+      <table class="data-table profile-table">
+        <thead>
+          <tr>
+            <th>Column</th><th>Type</th><th>Nulls</th><th>Distinct</th>
+            <th>Min</th><th>Max</th><th>Mean</th><th>Std</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for col in profile %}
+          <tr class="{{ 'row-flag' if col.null_pct != '0.0%' else '' }}">
+            <td class="col-name">{{ col.column }}</td>
+            <td>{{ col.type }}</td>
+            <td>{{ col.null_pct }}</td>
+            <td>{{ col.distinct }}</td>
+            <td>{{ col.min }}</td>
+            <td>{{ col.max }}</td>
+            <td>{{ col.mean }}</td>
+            <td>{{ col.std }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-header">
+      <h2 class="panel-title">Preview</h2>
+      <div class="panel-header-right">
+        <span class="panel-badge">first 12 of {{ row_count }} rows</span>
+        <a href="/preview-full" target="_blank" rel="noopener" class="btn btn-outline btn-small">Preview full ↗</a>
+        <a href="/download/csv" class="btn btn-outline btn-small">Download CSV</a>
+        <a href="/download/parquet" class="btn btn-outline btn-small">Download Parquet</a>
+        <button hx-post="/reset" hx-target="#workspace" hx-swap="outerHTML"
+                hx-confirm="Discard the current dataset and all applied steps?"
+                class="btn btn-outline btn-small">New upload</button>
+      </div>
+    </div>
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr>{% for col in columns %}<th>{{ col }}</th>{% endfor %}</tr>
+        </thead>
+        <tbody>
+          {% for row in rows[:12] %}
+          <tr>{% for val in row %}<td>{{ val if val is not none else "—" }}</td>{% endfor %}</tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2 class="panel-title">Propose a step</h2>
+    <form hx-post="/plan" hx-target="#decision-zone" hx-swap="innerHTML" class="step-form step-form-wrap">
+      <select name="step_type" class="select">
+        <optgroup label="Missing values">
+          <option value="drop_na">Drop rows with nulls in…</option>
+          <option value="impute">Fill nulls in…</option>
+          <option value="drop_sparse_columns">Drop columns with too many nulls</option>
+        </optgroup>
+        <optgroup label="Duplicates">
+          <option value="deduplicate">Remove duplicate rows</option>
+        </optgroup>
+        <optgroup label="Outliers">
+          <option value="remove_outliers">Remove outliers in…</option>
+          <option value="cap_outliers">Cap outliers in…</option>
+        </optgroup>
+        <optgroup label="Text cleanup">
+          <option value="trim_normalize">Trim / normalize case in…</option>
+          <option value="parse_numeric">Parse as number…</option>
+        </optgroup>
+        <optgroup label="Type &amp; encoding">
+          <option value="convert_type">Convert type of…</option>
+          <option value="one_hot_encode">One-hot encode…</option>
+          <option value="label_encode">Label-encode…</option>
+        </optgroup>
+        <optgroup label="Columns">
+          <option value="rename_column">Rename…</option>
+          <option value="drop_column">Drop column…</option>
+        </optgroup>
+        <optgroup label="Rows">
+          <option value="filter_rows">Keep rows where…</option>
+        </optgroup>
+      </select>
+      <select name="column" class="select">
+        <option value="">— no column needed —</option>
+        {% for col in columns_for_steps %}
+        <option value="{{ col }}">{{ col }}</option>
+        {% endfor %}
+      </select>
+      <select name="target_type" class="select">
+        <option value="">— target type (convert only) —</option>
+        <option value="integer">integer</option>
+        <option value="float">float</option>
+        <option value="text">text</option>
+        <option value="date">date</option>
+        <option value="boolean">boolean</option>
+      </select>
+      <select name="strategy" class="select">
+        <option value="">— fill strategy (impute only) —</option>
+        <option value="mean">mean</option>
+        <option value="median">median</option>
+        <option value="mode">mode</option>
+        <option value="constant">constant…</option>
+      </select>
+      <input type="text" name="constant_value" class="select" placeholder="constant value (if chosen above)">
+      <select name="case" class="select">
+        <option value="none">— case (trim/normalize only) —</option>
+        <option value="none">no case change</option>
+        <option value="lower">lowercase</option>
+        <option value="upper">UPPERCASE</option>
+        <option value="title">Title Case</option>
+      </select>
+      <input type="text" name="new_name" class="select" placeholder="new column name (rename only)">
+      <input type="number" name="threshold_pct" class="select" placeholder="null % threshold (drop-sparse only, default 50)" min="0" max="100" step="1">
+      <select name="operator" class="select">
+        <option value="">— comparison (filter rows only) —</option>
+        <option value="==">equals</option>
+        <option value="!=">not equals</option>
+        <option value=">">greater than</option>
+        <option value=">=">greater or equal</option>
+        <option value="<">less than</option>
+        <option value="<=">less or equal</option>
+        <option value="contains">contains</option>
+      </select>
+      <input type="text" name="value" class="select" placeholder="value to compare against (filter rows only)">
+      <button type="submit" class="btn btn-outline">Review step</button>
+    </form>
+
+    <div id="decision-zone"></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-header">
+      <h2 class="panel-title">Steps applied</h2>
+      {% if can_undo %}
+      <button hx-post="/undo" hx-target="#workspace" hx-swap="outerHTML"
+              class="btn btn-outline btn-small">Undo last step</button>
+      {% endif %}
+    </div>
+    {% if applied_steps %}
+    <ol class="applied-steps">
+      {% for step in applied_steps %}
+      <li><span class="applied-steps-index">{{ step.index }}</span>{{ step.description }}</li>
+      {% endfor %}
+    </ol>
+    {% else %}
+    <p class="panel-sub">No steps applied yet.</p>
+    {% endif %}
+    <details class="recipe-details">
+      <summary>View as JSON recipe</summary>
+      <div hx-get="/recipe" hx-trigger="load, stepCommitted from:body" hx-swap="innerHTML" id="recipe-box"></div>
+    </details>
+  </section>
+
+  {% else %}
+  <section class="panel empty-state">
+    <p>No dataset loaded yet. Upload a CSV above to see a profile and start cleaning.</p>
+  </section>
+  {% endif %}
+
+</div>

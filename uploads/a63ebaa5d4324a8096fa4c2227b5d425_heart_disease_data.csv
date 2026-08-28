@@ -1,0 +1,11 @@
+age,gender,family,diet,lifestyle,chol,heart
+Youth,Male,Yes,High,Sedetary,High,Yes
+MiddleAged,Female,No,Medium,Active,Normal,No
+SeniorCitizen,Male,Yes,High,Moderate,High,Yes
+Youth,Female,No,Low,Athlete,Normal,No
+Teen,Male,Yes,Medium,Active,BorderLine,Yes
+MiddleAged,Male,No,Medium,Moderate,Normal,No
+SeniorCitizen,Female,Yes,High,Moderate,High,Yes
+Youth,Male,No,Low,Active,Normal,No
+Teen,Female,Yes,Medium,Moderate,BorderLine,Yes
+MiddleAged,Female,No,Low,Athlete,Normal,No

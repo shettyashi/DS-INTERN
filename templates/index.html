@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="panel upload-panel">
+  <h1 class="panel-title">Load a dataset</h1>
+  <p class="panel-sub">CSV or Excel in, cleaned CSV/Parquet out. Every step gets confirmed before it runs.</p>
+  <form hx-post="/upload" hx-target="#workspace" hx-swap="outerHTML" hx-encoding="multipart/form-data" class="upload-form">
+    <input type="file" name="file" accept=".csv,.xlsx,.xls" required>
+    <button type="submit" class="btn btn-primary">Upload &amp; profile</button>
+  </form>
+</section>
+
+<div id="workspace">
+  {% include "_workspace.html" %}
+</div>
+
+{% endblock %}
