@@ -1,6 +1,6 @@
 """
 DS Intern — FastAPI + HTMX web app.
-
+ 
 Single global Pipeline instance (no sessions, no concurrency — by design).
 Routes:
   GET  /            -> upload form
@@ -9,18 +9,18 @@ Routes:
   POST /commit         -> commits a previously planned step, returns updated preview
   GET  /steps            -> returns the current committed step history (recipe)
 """
-
+ 
 from __future__ import annotations
-
+ 
 import os
 import uuid
-
+ 
 from fastapi import FastAPI, Request, UploadFile, Form, HTTPException
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import pandas as pd
-
+ 
 from core.pipeline import (
     Pipeline,
     Step,
@@ -39,21 +39,21 @@ from core.pipeline import (
     RenameColumnStep,
     FilterRowsStep,
 )
-
+ 
 UPLOAD_DIR = "uploads"
 DOWNLOAD_DIR = "downloads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
-
+ 
 app = FastAPI(title="DS Intern")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
-
+ 
 # --- global state (single-user, single pipeline, by design) ---------------
 pipeline: Pipeline | None = None
 pending_steps: dict[str, Step] = {}  # step.id -> Step, awaiting commit decision
-
-
+ 
+ 
 STEP_REGISTRY = {
     "one_hot_encode": OneHotEncodeStep,
     "drop_na": DropNAStep,
@@ -78,14 +78,14 @@ STEPS_NEEDING_TYPE = {"convert_type"}
 STEPS_NEEDING_STRATEGY = {"impute"}
 # Steps that need a case mode.
 STEPS_NEEDING_CASE = {"trim_normalize"}
-
-
+ 
+ 
 def _columns() -> list[str]:
     if pipeline is None:
         return []
     return pipeline.columns()
-
-
+ 
+ 
 def _format_profile(raw_profile: list[dict]) -> list[dict]:
     formatted = []
     for col in raw_profile:
@@ -96,7 +96,7 @@ def _format_profile(raw_profile: list[dict]) -> list[dict]:
                 return f"{float(v):.2f}"
             except (TypeError, ValueError):
                 return str(v)
-
+ 
         null_pct = col["null_pct"]
         formatted.append({
             "column": col["column"],
@@ -109,8 +109,8 @@ def _format_profile(raw_profile: list[dict]) -> list[dict]:
             "null_pct": f"{float(null_pct):.1f}%" if null_pct is not None else "0.0%",
         })
     return formatted
-
-
+ 
+ 
 def _preview_context() -> dict:
     if pipeline is None:
         return {"columns": [], "rows": [], "row_count": 0, "applied_steps": [],
@@ -133,8 +133,8 @@ def _preview_context() -> dict:
         "profile": _format_profile(pipeline.profile()),
         "can_undo": pipeline.can_undo(),
     }
-
-
+ 
+ 
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request):
     return templates.TemplateResponse(
@@ -142,12 +142,12 @@ def index(request: Request):
         "index.html",
         {**_preview_context(), "columns_for_steps": _columns()},
     )
-
-
+ 
+ 
 @app.post("/upload", response_class=HTMLResponse)
 async def upload(request: Request, file: UploadFile):
     global pipeline, pending_steps
-
+ 
     filename_lower = file.filename.lower()
     if filename_lower.endswith(".csv"):
         loader = "csv"
@@ -160,11 +160,11 @@ async def upload(request: Request, file: UploadFile):
             {"message": f'"{file.filename}" isn\'t a .csv or .xlsx file. '
                         f"Upload a CSV or Excel file to continue."},
         )
-
+ 
     dest_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4().hex}_{file.filename}")
     with open(dest_path, "wb") as f:
         f.write(await file.read())
-
+ 
     try:
         if loader == "csv":
             new_pipeline = Pipeline.from_csv(dest_path)
@@ -183,17 +183,17 @@ async def upload(request: Request, file: UploadFile):
             "_upload_error.html",
             {"message": f"Couldn't read that as a {kind} ({reason})."},
         )
-
+ 
     pipeline = new_pipeline
     pending_steps = {}
-
+ 
     return templates.TemplateResponse(
         request,
         "_workspace.html",
         {**_preview_context(), "columns_for_steps": _columns()},
     )
-
-
+ 
+ 
 @app.post("/reset", response_class=HTMLResponse)
 def reset(request: Request):
     global pipeline, pending_steps
@@ -204,8 +204,8 @@ def reset(request: Request):
         "_workspace.html",
         {**_preview_context(), "columns_for_steps": _columns()},
     )
-
-
+ 
+ 
 @app.post("/plan", response_class=HTMLResponse)
 def plan_step(
     request: Request,
@@ -223,7 +223,7 @@ def plan_step(
     global pending_steps
     if pipeline is None:
         return HTMLResponse("<div class='error'>Upload a file first.</div>")
-
+ 
     step_cls = STEP_REGISTRY[step_type]
     kwargs = {}
     if column and step_type not in STEPS_WITHOUT_COLUMN:
@@ -248,7 +248,7 @@ def plan_step(
             kwargs["operator"] = operator
         if value is not None:
             kwargs["value"] = value
-
+ 
     try:
         step = step_cls(**kwargs)
         result = pipeline.plan(step)
@@ -256,23 +256,23 @@ def plan_step(
         return templates.TemplateResponse(
             request, "_step_error.html", {"message": str(e)}
         )
-
+ 
     pending_steps[step.id] = step
-
+ 
     return templates.TemplateResponse(
         request,
         "_step_card.html",
         {"step_id": step.id, "description": result.description},
     )
-
-
+ 
+ 
 @app.post("/commit", response_class=HTMLResponse)
 def commit_step(request: Request, step_id: str = Form(...)):
     global pending_steps
     step = pending_steps.get(step_id)
     if pipeline is None or step is None:
         return HTMLResponse("<div class='error'>Nothing pending to commit.</div>")
-
+ 
     try:
         pipeline.commit(step)
     except Exception as e:
@@ -292,16 +292,16 @@ def commit_step(request: Request, step_id: str = Form(...)):
                 "commit_error": f"Couldn't apply that step: {e}",
             },
         )
-
+ 
     pending_steps.pop(step_id, None)
-
+ 
     return templates.TemplateResponse(
         request,
         "_workspace.html",
         {**_preview_context(), "columns_for_steps": _columns()},
     )
-
-
+ 
+ 
 @app.post("/undo", response_class=HTMLResponse)
 def undo(request: Request):
     if pipeline is not None:
@@ -311,14 +311,14 @@ def undo(request: Request):
         "_workspace.html",
         {**_preview_context(), "columns_for_steps": _columns()},
     )
-
-
+ 
+ 
 @app.post("/discard", response_class=HTMLResponse)
 def discard_step(step_id: str = Form(...)):
     pending_steps.pop(step_id, None)
     return HTMLResponse("")  # step card just disappears
-
-
+ 
+ 
 @app.get("/recipe", response_class=HTMLResponse)
 def recipe(request: Request):
     if pipeline is None:
@@ -326,8 +326,8 @@ def recipe(request: Request):
     return templates.TemplateResponse(
         request, "_recipe.html", {"recipe_json": pipeline.export_recipe()}
     )
-
-
+ 
+ 
 @app.get("/preview-full", response_class=HTMLResponse)
 def preview_full(request: Request):
     """
@@ -339,12 +339,12 @@ def preview_full(request: Request):
     if pipeline is None:
         return HTMLResponse("<p style='font-family:monospace;padding:20px;'>"
                              "No dataset loaded yet.</p>")
-
+ 
     limit = 500  # enough to actually look at, still bounded/safe on large data
     df = pipeline.preview(limit)
     df = df.astype(object).where(pd.notnull(df), None)
     total = pipeline.row_count()
-
+ 
     return templates.TemplateResponse(
         request,
         "_preview_full.html",
@@ -355,8 +355,47 @@ def preview_full(request: Request):
             "total": total,
         },
     )
-
-
+ 
+ 
+@app.get("/eda", response_class=HTMLResponse)
+def eda(request: Request):
+    """
+    Standalone EDA page: a histogram per numeric column, a value-count
+    bar chart per (low-cardinality) categorical column, and a correlation
+    matrix across numeric columns. Reflects the pipeline's CURRENT state
+    — i.e. after whatever cleaning steps have been committed so far.
+    """
+    if pipeline is None:
+        return HTMLResponse("<p style='font-family:monospace;padding:20px;'>"
+                             "No dataset loaded yet.</p>")
+ 
+    numeric_cols = pipeline.numeric_columns()
+    categorical_cols = pipeline.categorical_columns()
+ 
+    histograms = [
+        {"column": col, "data": pipeline.histogram(col)}
+        for col in numeric_cols
+    ]
+    bar_charts = [
+        {"column": col, "data": pipeline.value_counts(col)}
+        for col in categorical_cols
+    ]
+    correlation = pipeline.correlation_matrix() if len(numeric_cols) >= 2 else None
+ 
+    return templates.TemplateResponse(
+        request,
+        "_eda.html",
+        {
+            "row_count": pipeline.row_count(),
+            "histograms": histograms,
+            "bar_charts": bar_charts,
+            "correlation": correlation,
+            "has_numeric": bool(numeric_cols),
+            "has_categorical": bool(categorical_cols),
+        },
+    )
+ 
+ 
 @app.get("/download/csv")
 def download_csv():
     if pipeline is None:
@@ -364,8 +403,8 @@ def download_csv():
     out_path = os.path.join(DOWNLOAD_DIR, f"{uuid.uuid4().hex}_cleaned.csv")
     pipeline.export_csv(out_path)
     return FileResponse(out_path, media_type="text/csv", filename="cleaned.csv")
-
-
+ 
+ 
 @app.get("/download/parquet")
 def download_parquet():
     if pipeline is None:
@@ -373,3 +412,4 @@ def download_parquet():
     out_path = os.path.join(DOWNLOAD_DIR, f"{uuid.uuid4().hex}_cleaned.parquet")
     pipeline.export_parquet(out_path)
     return FileResponse(out_path, media_type="application/octet-stream", filename="cleaned.parquet")
+ 

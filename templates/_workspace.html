@@ -1,14 +1,14 @@
 <div id="workspace">
-
+ 
   {% if commit_error %}
   <section class="panel decision-card decision-card-error">
     <div class="decision-card-label">Couldn't apply that step</div>
     <p class="decision-card-desc">{{ commit_error }}</p>
   </section>
   {% endif %}
-
+ 
   {% if columns %}
-
+ 
   <section class="panel">
     <div class="panel-header">
       <h2 class="panel-title">Column profile</h2>
@@ -39,13 +39,14 @@
       </table>
     </div>
   </section>
-
+ 
   <section class="panel">
     <div class="panel-header">
       <h2 class="panel-title">Preview</h2>
       <div class="panel-header-right">
         <span class="panel-badge">first 12 of {{ row_count }} rows</span>
         <a href="/preview-full" target="_blank" rel="noopener" class="btn btn-outline btn-small">Preview full ↗</a>
+        <a href="/eda" target="_blank" rel="noopener" class="btn btn-outline btn-small">EDA ↗</a>
         <a href="/download/csv" class="btn btn-outline btn-small">Download CSV</a>
         <a href="/download/parquet" class="btn btn-outline btn-small">Download Parquet</a>
         <button hx-post="/reset" hx-target="#workspace" hx-swap="outerHTML"
@@ -66,7 +67,7 @@
       </table>
     </div>
   </section>
-
+ 
   <section class="panel">
     <h2 class="panel-title">Propose a step</h2>
     <form hx-post="/plan" hx-target="#decision-zone" hx-swap="innerHTML" class="step-form step-form-wrap">
@@ -144,10 +145,10 @@
       <input type="text" name="value" class="select" placeholder="value to compare against (filter rows only)">
       <button type="submit" class="btn btn-outline">Review step</button>
     </form>
-
+ 
     <div id="decision-zone"></div>
   </section>
-
+ 
   <section class="panel">
     <div class="panel-header">
       <h2 class="panel-title">Steps applied</h2>
@@ -170,11 +171,12 @@
       <div hx-get="/recipe" hx-trigger="load, stepCommitted from:body" hx-swap="innerHTML" id="recipe-box"></div>
     </details>
   </section>
-
+ 
   {% else %}
   <section class="panel empty-state">
     <p>No dataset loaded yet. Upload a CSV above to see a profile and start cleaning.</p>
   </section>
   {% endif %}
-
+ 
 </div>
+ 

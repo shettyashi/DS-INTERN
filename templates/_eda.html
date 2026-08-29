@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DS Intern — EDA</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    .chart-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+    }
+    .chart-box canvas { max-height: 260px; }
+    .corr-table { border-collapse: collapse; width: 100%; font-family: var(--font-mono); font-size: 12px; }
+    .corr-table th, .corr-table td { padding: 6px 10px; border: 1px solid var(--border-dim); text-align: center; }
+    .corr-table th { background: var(--panel-raised); color: var(--accent-teal); }
+    .corr-table td.corr-diag { color: var(--text-muted); }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-brand">
+      <span class="topbar-mark">▣</span>
+      <span class="topbar-title">ds_intern — eda</span>
+    </div>
+    <div class="topbar-meta">{% if row_count %}{{ row_count }} rows{% endif %}</div>
+  </header>
+ 
+  <main class="layout">
+ 
+    {% if not has_numeric and not has_categorical %}
+    <section class="panel">
+      <p class="panel-sub">No dataset loaded yet.</p>
+    </section>
+    {% endif %}
+ 
+    {% if histograms %}
+    <section class="panel">
+      <h2 class="panel-title">Numeric distributions</h2>
+      <div class="chart-grid">
+        {% for h in histograms %}
+        <div class="chart-box">
+          <p class="panel-sub" style="margin-bottom:6px;">{{ h.column }}</p>
+          <canvas id="hist-{{ loop.index }}"></canvas>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+ 
+    {% if bar_charts %}
+    <section class="panel">
+      <h2 class="panel-title">Category counts</h2>
+      <div class="chart-grid">
+        {% for b in bar_charts %}
+        <div class="chart-box">
+          <p class="panel-sub" style="margin-bottom:6px;">{{ b.column }}</p>
+          <canvas id="bar-{{ loop.index }}"></canvas>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+ 
+    {% if correlation %}
+    <section class="panel">
+      <h2 class="panel-title">Correlation matrix</h2>
+      {% if correlation.truncated %}
+      <p class="panel-sub">Showing the first {{ correlation.columns|length }} numeric columns only — more exist.</p>
+      {% endif %}
+      <div class="table-scroll">
+        <table class="corr-table">
+          <thead>
+            <tr><th></th>{% for c in correlation.columns %}<th>{{ c }}</th>{% endfor %}</tr>
+          </thead>
+          <tbody>
+            {% for row in correlation.matrix %}
+            <tr>
+              <th>{{ correlation.columns[loop.index0] }}</th>
+              {% for val in row %}
+              <td class="{{ 'corr-diag' if val == 1.0 else '' }}">{{ val if val is not none else "—" }}</td>
+              {% endfor %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+    {% elif has_numeric %}
+    <section class="panel">
+      <h2 class="panel-title">Correlation matrix</h2>
+      <p class="panel-sub">Need at least 2 numeric columns to compute correlations.</p>
+    </section>
+    {% endif %}
+ 
+  </main>
+ 
+  <script>
+    const chartDefaults = {
+      color: '#e8e8e8',
+      borderColor: '#4d4d4d',
+    };
+    Chart.defaults.color = chartDefaults.color;
+    Chart.defaults.borderColor = chartDefaults.borderColor;
+    Chart.defaults.font.family = "'IBM Plex Mono', monospace";
+ 
+    {% for h in histograms %}
+    new Chart(document.getElementById('hist-{{ loop.index }}'), {
+      type: 'bar',
+      data: {
+        labels: {{ h.data.labels | tojson }},
+        datasets: [{
+          label: '{{ h.column }}',
+          data: {{ h.data.counts | tojson }},
+          backgroundColor: '#33ff88',
+          borderColor: '#33ff88',
+          borderWidth: 1,
+        }]
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { maxRotation: 45, minRotation: 45 } },
+          y: { beginAtZero: true }
+        }
+      }
+    });
+    {% endfor %}
+ 
+    {% for b in bar_charts %}
+    new Chart(document.getElementById('bar-{{ loop.index }}'), {
+      type: 'bar',
+      data: {
+        labels: {{ b.data.labels | tojson }},
+        datasets: [{
+          label: '{{ b.column }}',
+          data: {{ b.data.counts | tojson }},
+          backgroundColor: '#ffcc00',
+          borderColor: '#ffcc00',
+          borderWidth: 1,
+        }]
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { maxRotation: 45, minRotation: 45 } },
+          y: { beginAtZero: true }
+        }
+      }
+    });
+    {% endfor %}
+  </script>
+</body>
+</html>
+ 
