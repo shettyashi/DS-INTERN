@@ -68,7 +68,7 @@ every committed step can be undone one at a time.
 - "Download CSV" / "Download Parquet" give you the complete file
   (all rows) to save locally.
 
-## Design decisions worth knowing
+## Design decisions 
 
 - Engine is DuckDB + views chained on top of each other — nothing is
   materialized into Python except bounded previews (LIMIT-based) and
@@ -79,16 +79,15 @@ every committed step can be undone one at a time.
 - Single global pipeline, no concurrency/session handling — a
   deliberate scope decision, not an oversight.
 - Target dataset scale: comfortably up to ~2GB CSV files.
-- If `/commit` fails partway (bad data, an edge case in generated SQL),
-  the error shows as a banner in the UI instead of a raw JSON/500 —
+- If `/commit` fails partway , the error shows as a banner in the UI instead of a raw JSON/500 —
   the pending step is preserved and the app stays usable.
 
-## Known gaps (not yet built)
+## Version-2 (v2) goals
 
 - Date parsing with explicit format strings (auto-detect struggles on
   ambiguous formats like 01/02/2024)
 - Fuzzy/near-duplicate detection
 - Split/merge column operations
-- Scaling/normalization and target encoding — intentionally held for
-  phase 2 (model training), since they're meaningless without that
-  context
+- Scaling/normalization and target encoding
+- Implementing the given data to Machine Learning algorithms for predicting or classifying required parameters.
+- To implement visual representation of given data.
